@@ -1,5 +1,4 @@
-int verify_user_name(void)
-{
+int verify_user_name(void){
   int username_len;
   char *buffer;
   char *username;
@@ -27,8 +26,7 @@ int verify_user_name(void)
   return (int)(char)((!bool_1 && !bool_2) - bool_1);
 }
 
-int verify_user_pass(char *param_1)
-{
+int verify_user_pass(char *param_1){
   int password_len;
   char *password;
   bool in_CF;
@@ -47,8 +45,7 @@ int verify_user_pass(char *param_1)
   return (int)(char)((!in_CF && !in_ZF) - in_CF);
 }
 
-int main(void)
-{
+int main(void){
   int return_value;
   char *buf_pointer;
   char buffer [64];

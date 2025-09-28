@@ -1,5 +1,4 @@
-int main(void)
-{
+int main(void){
   int is_valid_password;
   size_t ret_value;
   long index;
@@ -98,4 +97,3 @@ int main(void)
                     /* WARNING: Subroutine does not return */
   exit(1);
 }
-
