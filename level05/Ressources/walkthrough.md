@@ -40,10 +40,15 @@ level05@OverRide:~$ cat <<eof > /tmp/payload_address_getter.c
 Compile and run the code to get the address of the `PAYLOAD` environment variable.
 
 ```shell
+# Install 32-bit libraries if not already installed to compile 32-bit binaries
+sudo apt-get update
+sudo apt-get install gcc-multilib g++-multilib libc6-dev-i386
+...SNIP...
 level05@OverRide:/tmp$ gcc -m32 payload_address_getter.c 
 level05@OverRide:~$ /tmp/a.out
 0xfffed8e0
 ```
+
 Breaking down this address into two short integers, we get `0xfffe` for the high-order bytes and `0xd8e0` for the
 low-order bytes. We will use these values later in our format string.
 
