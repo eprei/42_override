@@ -10,6 +10,7 @@ bool main(void){
   puts("***********************************");
   printf("Password:");
   scanf(%d,user_input);
+
   if (user_input[0] != 5276) {
     puts("\nInvalid Password!");
   }
@@ -17,5 +18,6 @@ bool main(void){
     puts("\nAuthenticated!");
     system("/bin/sh");
   }
+
   return user_input[0] != 5276;
 }

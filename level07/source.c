@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/types.h>
 
 void clear_stdin(void){
   int i;
@@ -25,15 +24,15 @@ int get_unum(void){
 }
 
 int store_number(int *store){
-  uint number_input;
-  uint index_input;
+  unsigned int number_input;
+  unsigned int index_input;
   int ret;
 
   printf(" Number: ");
   number_input = get_unum();
   printf(" Index: ");
   index_input = get_unum();
-  if ((index_input % 3 == 0) || (number_input >> 24 == 0xb7)) {
+  if (index_input % 3 == 0 || number_input >> 24 == 0xb7) {
     puts(" *** ERROR! ***");
     puts("   This index is reserved for wil!");
     puts(" *** ERROR! ***");

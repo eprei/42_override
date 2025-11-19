@@ -4,10 +4,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdbool.h>
-void log_wrapper(FILE *file,char *log_msg,char *argv_1);
 
-int main(int argc,char **argv){
-  char buf [104];
+void log_wrapper(FILE *file,char *log_msg, char *argv_1);
+
+int main(int argc, char **argv){
+  char buffer[104];
 
   if (argc != 2) {
     printf("Usage: %s filename\n",*argv);
@@ -27,11 +28,10 @@ int main(int argc,char **argv){
     exit(1);
   }
 
-  strncpy(buf, "./backups/", 11);
+  strncpy(buffer, "./backups/", 11);
+  strncat(buffer, argv[1], sizeof(buffer) - strlen(buffer) - 1);
 
-  strncat(buf, argv[1], sizeof(buf) - strlen(buf) - 1);
-
-  int fd_backup = open(buf, 193, 432);
+  int fd_backup = open(buffer, 193, 432);
   if (fd_backup < 0) {
     printf("ERROR: Failed to open %s%s\n","./backups/",argv[1]);
     exit(1);
@@ -53,44 +53,14 @@ int main(int argc,char **argv){
 }
 
 void log_wrapper(FILE *file, char *log_msg, char *argv_1){
-  size_t array_len;
-  unsigned long max_u_long_1;
-  unsigned long max_u_long_2;
-  char *pcVar1;
-  long in_FS_OFFSET;
-  byte zero;
-  undefined8 local_120;
-  char array [264];
-  long canary;
-  char c;
+  size_t array_len, log_msg_len;
+  char buffer[264];
 
-  zero = 0;
-  canary = *(long *)(in_FS_OFFSET + 40);
-  local_120 = file;
-  strcpy(array,log_msg);
-  max_u_long_1 = 0xffffffffffffffff;
-  pcVar1 = array;
-  do {
-    if (max_u_long_1 == 0) break;
-    max_u_long_1 = max_u_long_1 - 1;
-    c = *pcVar1;
-    pcVar1 = pcVar1 + (unsigned long)zero * -2 + 1;
-  } while (c != '\0');
-  max_u_long_2 = 0xffffffffffffffff;
-  pcVar1 = array;
-  do {
-    if (max_u_long_2 == 0) break;
-    max_u_long_2 = max_u_long_2 - 1;
-    c = *pcVar1;
-    pcVar1 = pcVar1 + (unsigned long)zero * -2 + 1;
-  } while (c != '\0');
-  snprintf(array + (~max_u_long_2 - 1),254 - (~max_u_long_1 - 1),argv_1);
-  array_len = strcspn(array,"\n");
-  array[array_len] = '\0';
-  fprintf(local_120,"LOG: %s\n",array);
-  if (canary != *(long *)(in_FS_OFFSET + 40)) {
-    __stack_chk_fail();
-  }
-  return;
+  strcpy(buffer, log_msg);
+  log_msg_len = strlen(buffer);
+
+  snprintf(buffer + log_msg_len, 254 - log_msg_len, argv_1);
+  array_len = strcspn(buffer, "\n");
+  buffer[array_len] = '\0';
+  fprintf(file, "LOG: %s\n", buffer);
 }
-
